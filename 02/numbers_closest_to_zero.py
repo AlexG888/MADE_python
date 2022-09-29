@@ -13,7 +13,7 @@ def numbers_closest_to_zero(arr):
     return result
 
 
-print(numbers_closest_to_zero([0, 1, 2, 3, 4, 5]))
-print(numbers_closest_to_zero([-100000, 1, 4, 56, 4, 1, 1]))
-print(numbers_closest_to_zero([-0.32423, -1, 4.34232, 56, 0.32423]))
+assert numbers_closest_to_zero([0, 1, 2, 3, 4, 5]) == [0]
+assert numbers_closest_to_zero([-100000, 1, 4, 56, 4, 1, 1]) == [1, 1, 1]
+assert numbers_closest_to_zero([-0.32423, -1, 4.34232, 56, 0.32423]) == [-0.32423, 0.32423]
 print("OK")
