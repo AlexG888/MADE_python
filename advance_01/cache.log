@@ -1,0 +1,16 @@
+2022-10-28 19:46:26,136	DEBUG	root	initialized object LRUCache with capacity 2
+2022-10-28 19:46:26,136	DEBUG	root	the node with the key k1 and value val1 added to dictionary
+2022-10-28 19:46:26,136	DEBUG	root	the node with the key k2 and value val2 added to dictionary
+2022-10-28 19:46:26,136	DEBUG	root	node with key k2 and value val2 was recently used
+2022-10-28 19:46:26,136	DEBUG	root	node with key k1 and value val1 was recently used
+2022-10-28 19:46:26,136	DEBUG	root	the node with the key k2 deleted from dictionary
+2022-10-28 19:46:26,136	DEBUG	root	the node with the key k3 and value val2 added to dictionary
+2022-10-28 19:46:26,136	DEBUG	root	initialized object LRUCache with capacity 1
+2022-10-28 19:46:26,136	DEBUG	root	the node with the key k1 and value val1 added to dictionary
+2022-10-28 19:46:26,137	DEBUG	root	the node with the key k1 deleted from dictionary
+2022-10-28 19:46:26,137	DEBUG	root	the node with the key k2 and value val1 added to dictionary
+2022-10-28 19:46:26,137	DEBUG	root	node with key k2 and value val2 was recently used
+2022-10-28 19:46:26,137	DEBUG	root	the node with the key k1 is not in the dictionary
+2022-10-28 19:46:26,137	DEBUG	root	the node with the key k2 deleted from dictionary
+2022-10-28 19:46:26,137	DEBUG	root	the node with the key k3 and value val2 added to dictionary
+2022-10-28 19:46:26,137	WARNING	root	LRUCache object accepts only integer as input
