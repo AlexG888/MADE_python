@@ -1,90 +1,99 @@
-import threading
-import argparse
+from sys import argv
+from threading import Thread, Lock
 import socket
+from queue import Queue
+
 import requests
 from bs4 import BeautifulSoup
-import queue
 import json
 
 
-def createParser():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-w")
-    parser.add_argument("-k")
-    return parser
+def connection(addr1, addr2):
+    sock1 = socket.socket()
+    sock2 = socket.socket()
+    sock1.bind(("", addr1))
+    sock2.bind(("", addr2))
+    sock1.listen(5)
+    sock2.listen(5)
+    client1 = sock1.accept()[0]
+    client2 = sock2.accept()[0]
+    return client1, client2, sock1, sock2
 
 
-def get_words_freq_dict(data, k):
-    url = data
-    html_text = requests.get(url).text
-    soup = BeautifulSoup(html_text, "lxml")
-    text = soup.get_text()
-    text = text.replace("\n", " ")
-    text = text.replace(",", "").replace(".", "").replace("?", "").replace("!", "")
-    text = text.lower()
-    words = text.split()
-    words.sort()
-    words_dict = dict()
-    for word in words:
-        if word in words_dict:
-            words_dict[word] = words_dict[word] + 1
-        else:
-            words_dict[word] = 1
-    sorted_dict = dict(
-        sorted(words_dict.items(), key=lambda x: x[1], reverse=True)[: int(k)]
-    )
-    result = {url: sorted_dict}
-    return json.dumps(result).encode()
-
-
-def worker(k, que, semaphore):
+def get_words_freq_dict(queue, num, lock, client, k):
     while True:
-        try:
-            data = que.get()
-        except queue.Empty:
-            continue
-        if data is None:
-            que.put(None)
+        url = queue.get()
+        if url == "-":
+            queue.put(url)
             break
-        with semaphore:
-            addr.send(get_words_freq_dict(data.decode(), k))
-            global cnt_workers
-            cnt_workers += 1
-            print(f"Обработано urls: {cnt_workers}")
+        try:
+            req = requests.get(url, timeout=2)
+        except requests.exceptions.ReadTimeout:
+            result = json.dumps({url: "error"}, ensure_ascii=False)
+        except requests.ConnectionError:
+            result = json.dumps({url: "error"}, ensure_ascii=False)
+        except requests.exceptions.MissingSchema:
+            result = json.dumps({url: "error"}, ensure_ascii=False)
+        else:
+            html_text = req.text
+            soup = BeautifulSoup(html_text, "lxml")
+            text = soup.get_text()
+            text = text.replace("\n", " ")
+            text = (
+                text.replace(",", "").replace(".", "").replace("?", "").replace("!", "")
+            )
+            text = text.lower()
+            words = text.split()
+            words.sort()
+            words_dict = dict()
+            for word in words:
+                if word in words_dict:
+                    words_dict[word] = words_dict[word] + 1
+                else:
+                    words_dict[word] = 1
+            sorted_dict = dict(
+                sorted(words_dict.items(), key=lambda x: x[1], reverse=True)[: int(k)]
+            )
+            result = {url: sorted_dict}
+        client.send(json.dumps(result).encode("utf-8"))
+        with lock:
+            num[0] += 1
+            print(num[0], "urls processed")
 
 
-def add_to_queue(que):
-    que.put(addr.recv(1024))
+def get_url(queue, client):
+    while True:
+        urls = client.recv(4096).decode("utf-8").split("\n")
+        for url in urls:
+            if url:
+                queue.put(url)
+            if url == "-":
+                return None
+
+
+def server(workers_number, k, addr=7500):
+    client1, client2, sock1, sock2 = connection(addr, addr + 100)
+    lock = Lock()
+    queue = Queue()
+    num = [0]
+
+    threads = [
+        Thread(target=get_words_freq_dict, args=(queue, num, lock, client2, k))
+        for _ in range(workers_number + 1)
+    ]
+    threads.append(Thread(target=get_url, args=(queue, client1)))
+
+    for thread in threads:
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+    sock1.close()
+    sock2.close()
 
 
 if __name__ == "__main__":
-    parser = createParser()
-    namespace = parser.parse_args()
-
-    que = queue.Queue(maxsize=int(namespace.w))
-    sem = threading.Semaphore(int(namespace.w))
-    file_len = 100
-    cnt_workers = 0
-
-    sock = socket.socket()
-    sock.bind(("localhost", 7500))
-    sock.listen(5)
-    addr, client_sock = sock.accept()
-
-    threads = [
-        threading.Thread(
-            target=worker,
-            args=(namespace.k, que, sem),
-        )
-        for _ in range(int(namespace.w))
-    ]
-
-    for th in threads:
-        th.start()
-
-    for _ in range(file_len):
-        add_to_queue(que)
-    que.put(None)
-
-    for th in threads:
-        th.join()
+    W = int(argv[2])
+    K = int(argv[4])
+    server(W, K)
