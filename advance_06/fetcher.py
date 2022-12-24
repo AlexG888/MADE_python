@@ -4,20 +4,24 @@ import aiohttp
 
 
 async def fetcher(filename, threads=10):
-    queue_urls = asyncio.Queue(maxsize=30)
-    file = open(filename, "r", encoding="utf8")
+    queue_urls = asyncio.Queue()
     async with aiohttp.ClientSession() as session:
-        task = asyncio.create_task(_make_queue(file, queue_urls))
-        tasks = [
-            asyncio.create_task(_fetch_url(f"w_{t}", session, queue_urls))
-            for t in range(threads)
-        ]
-        await task
-        await queue_urls.join()
+        try:
+            task = asyncio.create_task(_make_queue(filename, queue_urls))
+            tasks = [
+                asyncio.create_task(_fetch_url(f"w_{t}", session, queue_urls))
+                for t in range(threads)
+            ]
+            await task
+            await queue_urls.join()
+        except StopAsyncIteration:
+            return
+        except ...:
+            pass
+
     for task in tasks:
         task.cancel()
     task.cancel()
-    file.close()
 
 
 async def _fetch_url(name, session, queue_urls):
@@ -33,9 +37,17 @@ async def _fetch_url(name, session, queue_urls):
             queue_urls.task_done()
 
 
-async def _make_queue(file, queue_urls):
-    for url in file:
-        await queue_urls.put(url.rstrip("\n"))
+async def _make_queue(filename, queue_urls):
+    try:
+        file = open(filename, "r", encoding="utf8")
+        for url in file:
+            await queue_urls.put(url.rstrip("\n"))
+        file.close()
+    except FileNotFoundError:
+        pass
+
+async def main():
+    await fetcher(file_name, N)
 
 
 if __name__ == "__main__":
@@ -46,4 +58,4 @@ if __name__ == "__main__":
     file_name = sys.argv[i + 2]
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    loop.run_until_complete(fetcher(file_name, N))
+    loop.run_until_complete(main())
